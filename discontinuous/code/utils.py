@@ -11,8 +11,14 @@ from nets import *
 # generate uniform distributed points in a domain [a1,b1]X[a2,b2]X...X[ad,bd]
 # domain_intervals = [[a1,b1],[a2,b2],...,[ad,bd]]
 
+def init_net(net):
+    for m in net.modules():
+        if isinstance(m, (nn.Conv2d, nn.Linear)):
+            nn.init.xavier_uniform_(m.weight) 
+    return net
+
 def data_to_cuda(array):
-    tensor = torch.Tensor(array)
+    tensor = torch.Tensor(array).cuda()
     tensor.requires_grad=False
     return tensor
 
@@ -28,6 +34,31 @@ def generate_uniform_points_in_cube(domain_intervals,N,generate_type='npr'):  # 
         points = pyDOE.lhs(d,N) *(r-l) + l  
     return points
 
+def generate_uniform_points_in_fan(domain_intervals,N,start_angle,end_angle): # generate points at T=0 in a circle
+    d = domain_intervals.shape[0]
+    r = domain_intervals[0,1]
+    points = np.zeros((N,d))
+    polar_axis = np.zeros((N,d))
+    polar_axis[:,0] = np.random.uniform(0,r**2,(N,))
+    polar_axis[:,1] = np.random.uniform(start_angle,end_angle,(N,))
+    points[:,0] = np.sqrt(polar_axis[:,0]) * np.cos(polar_axis[:,1])
+    points[:,1] = np.sqrt(polar_axis[:,0]) * np.sin(polar_axis[:,1])
+    return points
+
+def generate_uniform_points_on_fan(domain_intervals,N,start_angle,end_angle,direction='inflow'): # generate points at T=0 in a circle
+    d = domain_intervals.shape[0]
+    r = domain_intervals[0,1]
+    points = np.zeros((N,d))
+    polar_axis = np.zeros((N,d))
+    polar_axis[:,0] = np.random.uniform(0,r,(N,))
+    if direction == 'inflow':
+        polar_axis[:,1] = start_angle
+    elif direction == 'outflow':
+        polar_axis[:,1] = start_angle
+    points[:,0] = polar_axis[:,0] * np.cos(polar_axis[:,1])
+    points[:,1] = polar_axis[:,0] * np.sin(polar_axis[:,1])
+    return points
+
 # generate uniform distributed points on the boundary of domain [a1,b1]X[a2,b2]X...X[ad,bd]
 # domain_intervals = [[a1,b1],[a2,b2],...,[ad,bd]]
 def generate_uniform_points_on_cube(domain_intervals,N_each_face,generate_type='npr'):
@@ -39,6 +70,7 @@ def generate_uniform_points_on_cube(domain_intervals,N_each_face,generate_type='
         points = np.zeros((2*d*N_each_face,d))
         for i in range(d):
             points[2*i*N_each_face:(2*i+1)*N_each_face,:] = np.insert(generate_uniform_points_in_cube(np.delete(domain_intervals,i,axis=0),N_each_face,generate_type=generate_type), i, values=domain_intervals[i,0]*np.ones((1,N_each_face)), axis = 1)
+            points[(2*i+1)*N_each_face:(2*i+2)*N_each_face,:] = np.insert(generate_uniform_points_in_cube(np.delete(domain_intervals,i,axis=0),N_each_face,generate_type=generate_type), i, values=domain_intervals[i,1]*np.ones((1,N_each_face)), axis = 1)
         return points
 
 def generate_uniform_points_in_cylinder(domain_intervals,N):
@@ -95,12 +127,13 @@ def take_inflow_bd(x2_train,if_cuda=False):
     else:
         N_2 = x2_train.size(0)
         d = x2_train.size(1)
-        x2_train_selected = torch.zeros([N_2//2,d])
+        x2_train_selected = torch.zeros([N_2//2,d]).cuda()
     x2_train_selected[0:N_2//4,:] = x2_train[0:N_2//4,:]
     x2_train_selected[N_2//4:2*N_2//4,:] = x2_train[2*N_2//4:3*N_2//4,:]
     return x2_train_selected
 
-def generate_lr_scheme(n_epoch,lr0_u,lr0_v,nu_u,nu_v):
+def generate_lr_scheme(n_epoch,lr0_u,lr0_v,nu_u,nu_v,alg='PINN',restart_time=None):
+
     lr_u_seq = np.zeros(n_epoch)  # set the learning rates for each epoch
     lr_v_seq = np.zeros(n_epoch)
 
@@ -115,22 +148,44 @@ def generate_lr_scheme(n_epoch,lr0_u,lr0_v,nu_u,nu_v):
 
     return lr_u_seq,lr_v_seq
 
-def generate_network(net_name,dim,width,boundary_control_type='None',base_function = None):
+def generate_network(net_name,dim,width,net_type='net_u',boundary_control_type='auto',base_function = None):
     if base_function == None:
         if net_name == 'ResNet_Relu':
-            net = ResNet_Relu(width,dim,boundary_control_type=boundary_control_type)
+            if boundary_control_type == 'auto':
+                net = ResNet_Relu(width,dim,boundary_control_type=net_type)
+            elif boundary_control_type == 'L2':
+                net = ResNet_Relu(width,dim,boundary_control_type='none')
+
         elif net_name == 'ResNet_Tanh':
-            net = ResNet_Tanh(width,dim,boundary_control_type=boundary_control_type)  
+            if boundary_control_type == 'auto':
+                net = ResNet_Tanh(width,dim,boundary_control_type=net_type)  
+            elif boundary_control_type == 'L2':
+                net = ResNet_Tanh(width,dim,boundary_control_type='none')  
+
         elif net_name == 'ResNet_ST':
-            net = ResNet_ST(width,dim,boundary_control_type=boundary_control_type)  
+            if boundary_control_type == 'auto':
+                net = ResNet_ST(width,dim,boundary_control_type=net_type)  
+            elif boundary_control_type == 'L2':
+                net = ResNet_ST(width,dim,boundary_control_type='none')  
 
     else:
         if net_name == 'ResNet_Relu':
-            net = ResNet_Relu_base(width,dim,boundary_control_type=boundary_control_type,base_function=base_function)
+            if boundary_control_type == 'auto':
+                net = ResNet_Relu_base(width,dim,boundary_control_type=net_type,base_function=base_function)
+            elif boundary_control_type == 'L2':
+                net = ResNet_Relu_base(width,dim,boundary_control_type='none',base_function=base_function)
+
         elif net_name == 'ResNet_Tanh':
-            net = ResNet_Tanh_base(width,dim,boundary_control_type=boundary_control_type,base_function=base_function)  
+            if boundary_control_type == 'auto':
+                net = ResNet_Tanh_base(width,dim,boundary_control_type=net_type,base_function=base_function)
+            elif boundary_control_type == 'L2':
+                net = ResNet_Tanh_base(width,dim,boundary_control_type='none',base_function=base_function)
+
         elif net_name == 'ResNet_ST':
-            net = ResNet_ST_base(width,dim,boundary_control_type=boundary_control_type,base_function=base_function)       
+            if boundary_control_type == 'auto':
+                net = ResNet_ST_base(width,dim,boundary_control_type=net_type,base_function=base_function)
+            elif boundary_control_type == 'L2':
+                net = ResNet_ST_base(width,dim,boundary_control_type='none',base_function=base_function)
     return net
 
 def generate_optimizer(net,optim_name,init_lr):
