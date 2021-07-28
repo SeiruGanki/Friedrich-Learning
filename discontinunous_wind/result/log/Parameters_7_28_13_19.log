@@ -1,0 +1,18 @@
+Parameters:
+d = 2
+m_u = 100
+m_v = 100
+n_epoch = 10001
+N_inside_train = 40000
+N_boundary_train = 10000
+initial slu net lr  = 0.0008
+initial test net lr  = 0.0014
+nu_u = 10000
+nu_v = 10000
+alg = PINN
+restart_time = PINN
+sampling_type = lhs
+optimizer_u = Adam
+optimizer_v = Rmsprop
+boundary_control_type = L2
+min l2 error = 0.13904254473955238, min max error = 0.547647520811487, 
