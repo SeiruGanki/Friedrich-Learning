@@ -1,0 +1,9 @@
+  0%|          | 0/100 [00:00<?, ?trial/s, best loss=?]                                                       Train start! Setting Params:
+  0%|          | 0/100 [00:00<?, ?trial/s, best loss=?]                                                       {'alg': 'PINN', 'boundary_control_type': 'L2', 'lr0_u': 0.0008, 'lr0_v': 0.0014, 'm_u': 100, 'm_v': 100, 'net_u': 'ResNet_Tanh', 'net_v': 'ResNet_Tanh', 'nu_u': 10000, 'nu_v': 10000, 'optimizer_u': 'Adam', 'optimizer_v': 'Rmsprop', 'restart_time': None, 'sampling_type': 'lhs'}
+  0%|          | 0/100 [00:00<?, ?trial/s, best loss=?]                                                       min l2 error =  3.216e-01,  
+  0%|          | 0/100 [10:18<?, ?trial/s, best loss=?]                                                       min max error =  6.539e-01,  
+  0%|          | 0/100 [10:18<?, ?trial/s, best loss=?]                                                       [3.86077442e+02 8.63603216e+02 2.92320729e+02 ... 8.61337260e-02
+ 9.31589415e-02 9.07329918e-02]
+  0%|          | 0/100 [10:18<?, ?trial/s, best loss=?]  1%|          | 1/100 [10:18<17:00:56, 618.76s/trial, best loss: 0.32158216192995176]                                                                                      Train start! Setting Params:
+  1%|          | 1/100 [10:18<17:00:56, 618.76s/trial, best loss: 0.32158216192995176]                                                                                      {'alg': 'PINN', 'boundary_control_type': 'L2', 'lr0_u': 0.0008, 'lr0_v': 0.0014, 'm_u': 100, 'm_v': 100, 'net_u': 'ResNet_Tanh', 'net_v': 'ResNet_Tanh', 'nu_u': 10000, 'nu_v': 10000, 'optimizer_u': 'Adam', 'optimizer_v': 'Rmsprop', 'restart_time': None, 'sampling_type': 'lhs'}
+  1%|          | 1/100 [10:18<17:00:56, 618.76s/trial, best loss: 0.32158216192995176]  1%|          | 1/100 [18:36<30:42:03, 1116.40s/trial, best loss: 0.32158216192995176]
